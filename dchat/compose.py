@@ -155,6 +155,9 @@ class SeededTreeComposer (object):
                 res.append(n.tup[2])
             return res
         
+        def get_weight(phrase):
+            return 1. / ((abs(self.target - len(x)) + 1))
+        
         candidates = set()
         
         for s in starts:
@@ -177,12 +180,12 @@ class SeededTreeComposer (object):
         for c in candidates:
             compressed.add(tuple(compress(c)))
             
-        compressed = sorted(compressed, key=lambda x: 1. / abs(self.target - len(x)), reverse=True)
-        total = sum(1. / abs(self.target - len(x)) for x in compressed)
+        compressed = sorted(compressed, key=get_weight, reverse=True)
+        total = sum(get_weight(x) for x in compressed)
         r = random.uniform(0, total)
         acc = 0
         for c in compressed:
-            acc += abs(self.target - len(x))
+            acc += get_weight(c)
             if acc > r:
                 return " ".join(c)
             
