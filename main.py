@@ -1,9 +1,25 @@
-import sys, hmac, time
-import dchat, api, httpservice
+import sys, hmac, time, itertools
+import dchat, api, httpservice, ircservice
 
 client_params = {
     'test-client': 'test-client'
 }
+
+def main(mode, host='localhost', port=7000, *args):
+
+    storage = dchat.storage.SqliteBackend("brain.db")
+    
+    if mode == "http":
+        backend = api.LockingApi(api.DictionaryApi(storage, authenticator))
+        httpservice.listen((host, int(port)), backend)
+    elif mode == "irc":
+        sl = dchat.learn.SimpleLearner(storage)
+        sc = dchat.compose.SeededTreeComposer(storage)
+        bot = ircservice.ChatBot(*itertools.chain([sl, sc], args, [host, port]))
+        bot.start()
+    
+    storage.close()
+    return 0
 
 def authenticator(cid, timestamp, secret):
     window = 100 # token validity in ms
@@ -17,12 +33,6 @@ def authenticator(cid, timestamp, secret):
     h.update(str(timestamp))
     d = h.hexdigest()
     return hmac.compare_digest(d, str(secret))
-
-def main():
-    storage = dchat.storage.SqliteBackend("brain.db")
-    backend = api.LockingApi(api.DictionaryApi(storage, authenticator))
-    httpservice.listen(('localhost', 7002), backend)
-    storage.close()
 
 if __name__ == "__main__":
     sys.exit(main(*sys.argv[1:]))
