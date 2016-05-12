@@ -1,27 +1,27 @@
-import sys
-import dchat
+import sys, hmac, time
+import dchat, api, httpservice
+
+client_params = {
+    'test-client': 'test-client'
+}
+
+def authenticator(cid, timestamp, secret):
+    window = 100 # token validity in ms
+    cur = int(time.time() * 1000)
+    timestamp = int(timestamp)
+    if not cid in client_params:
+        return False
+    if cur - window > timestamp or cur + window < timestamp:
+        return False
+    h = hmac.new(client_params[cid])
+    h.update(str(timestamp))
+    d = h.hexdigest()
+    return hmac.compare_digest(d, str(secret))
 
 def main():
     storage = dchat.storage.SqliteBackend("brain.db")
-    composer = dchat.compose.SeededTreeComposer(storage)
-    learner = dchat.learn.SimpleLearner(storage)
-    
-    phrases = [
-        "hello world this is denice",
-        "this is not the time for shenanigans",
-        "the time for action is now",
-        "is denice here right now?",
-        "i like toast with peanut butter",
-        "i like cake and ice cream",
-        "peanut butter jelly time"
-    ]
-    
-    for p in phrases:
-        learner.learn(p)
-    
-    for _ in xrange(10):
-        print(composer.generate())
-    
+    backend = api.LockingApi(api.DictionaryApi(storage, authenticator))
+    httpservice.listen(('localhost', 7002), backend)
     storage.close()
 
 if __name__ == "__main__":
