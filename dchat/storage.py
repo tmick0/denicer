@@ -23,6 +23,8 @@ class AbstractBackend (object):
         raise NotImplementedError()
     def getRowEndingWith(self, b, c):
         raise NotImplementedError()
+    def getRowContaining(self, a):
+        raise NotImplementedError()
 
 class SqliteBackend (AbstractBackend):
     
@@ -103,3 +105,14 @@ class SqliteBackend (AbstractBackend):
         if res == None:
             raise EmptyResponseError()
         return self._tupleToRow(res)
+    
+    def getRowContaining(self, a):
+        res = self._con.execute(
+            "SELECT a, b, c, s, e FROM DICTIONARY WHERE a = ? OR b = ? OR c = ? ORDER BY RANDOM() LIMIT 1",
+            [a, a, a]
+        ).fetchone()
+        if res == None:
+            raise EmptyResponseError()
+        return self._tupleToRow(res)
+    
+    

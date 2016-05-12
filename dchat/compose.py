@@ -1,5 +1,6 @@
-import collections
+import collections, itertools, random
 from dchat.storage import EmptyResponseError
+from dchat.utils import WordTree
 
 class SimpleComposer (object):
 
@@ -43,7 +44,7 @@ class TwoWayComposer (object):
 
 class TwoWayExtendingComposer (object):
 
-    def __init__(self, backend, targetLength = 4, maxAttempts = 10):
+    def __init__(self, backend, targetLength = 8, maxAttempts = 10):
         self._st = backend
         self._targetLength = targetLength
         self._maxAttempts = maxAttempts
@@ -87,3 +88,101 @@ class TwoWayExtendingComposer (object):
                 stop = False
                 
         return " ".join(phrase)
+
+class SeededTreeComposer (object):
+
+    def __init__(self, backend, seed = None, targetLength = 8, iters = None):
+        self._st = backend
+        self.seed = seed
+        self.target = targetLength
+        self.iters = iters
+        if iters == None:
+            self.iters = 2 * targetLength
+    
+    def generate(self):
+    
+        seed, start, stop = None, False, False
+        
+        if self.seed != None:
+            try:
+                seed, start, stop = self._st.getRowContaining(self.seed)
+            except EmptyResponseError:
+                pass
+        
+        if seed == None:
+            seed, start, stop = self._st.getRow()
+        
+        t = WordTree()
+        t.insert(*itertools.chain(seed, [start, stop]))
+        
+        for i in xrange(0, self.iters):
+            for n in t.nodes():
+                if not n.start:
+                    try:
+                        seq, start, stop = self._st.getRowEndingWith(n.tup[0], n.tup[1])
+                        if not tuple(seq) in set(tuple(x.tup) for x in n.preds):
+                            m = t.insert(*itertools.chain(seq, [start, stop]))
+                            n.preds.append(m)
+                            m.parent = n
+                    except EmptyResponseError:
+                        n.start = True
+                if not n.end:
+                    try:
+                        seq, start, stop = self._st.getRowStartingWith(n.tup[1], n.tup[2])
+                        if not tuple(seq) in set(tuple(x.tup) for x in n.succs):
+                            m = t.insert(*itertools.chain(seq, [start, stop]))
+                            n.succs.append(m)
+                            m.parent = n
+                    except EmptyResponseError:
+                        n.end = True
+                        
+        starts = t.starts()
+        ends = set(t.ends())
+        
+        def successor_paths(n):
+            for s in n.succs:
+                if s in ends:
+                    yield [s]
+                else:
+                    for c in successor_paths(s):
+                        p2 = [s]
+                        p2.extend(c)
+                        yield p2
+        
+        def compress(path):
+            res = list(path[0].tup)
+            for n in path[1:]:
+                res.append(n.tup[2])
+            return res
+        
+        candidates = set()
+        
+        for s in starts:
+        
+            parents = []
+            p = s
+            while p != None and (s is p or s in p.preds):
+                parents.append(p)
+                p = p.parent
+            
+            for i in xrange(0, len(parents)):
+                prefix = parents[:i+1]
+                root = parents[i]
+                succs = [x for x in successor_paths(root)]
+                for succ in succs:
+                    candidates.add(tuple(itertools.chain(prefix, succ)))
+
+        compressed = set()
+
+        for c in candidates:
+            compressed.add(tuple(compress(c)))
+            
+        compressed = sorted(compressed, key=lambda x: 1. / abs(self.target - len(x)), reverse=True)
+        total = sum(1. / abs(self.target - len(x)) for x in compressed)
+        r = random.uniform(0, total)
+        acc = 0
+        for c in compressed:
+            acc += abs(self.target - len(x))
+            if acc > r:
+                return " ".join(c)
+            

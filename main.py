@@ -3,7 +3,7 @@ import dchat
 
 def main():
     storage = dchat.storage.SqliteBackend("brain.db")
-    composer = dchat.compose.TwoWayExtendingComposer(storage)
+    composer = dchat.compose.SeededTreeComposer(storage)
     learner = dchat.learn.SimpleLearner(storage)
     
     phrases = [
