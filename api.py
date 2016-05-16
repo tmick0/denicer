@@ -29,6 +29,31 @@ def customizedPush(backend, message, **kwargs):
         "response": "ok"
     }
 
+class TextCommandApi (object):
+
+    def __init__(self, storage):
+        self._st = storage
+    
+    def handle(self, method, args=""):
+        if method == "fetch":
+            composer = "SeededTreeComposer"
+            kwargs = {}
+            argparts = args.split(" ")
+            for v in argparts:
+                sp = v.split("=")
+                if len(sp) > 1:
+                    if sp[0] == "composer":
+                        composer = sp[1]
+                    else:
+                        kwargs[sp[0]] = sp[1]
+            r = customizedFetch(self._st, composer, **kwargs)
+            if 'error' in r:
+                return r['error']
+            else:
+                return r['response']
+        elif method == "learn":
+            customizedPush(self._st, args)
+
 class DictionaryApi (object):
 
     def __init__(self, storage, authenticator):

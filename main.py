@@ -13,9 +13,8 @@ def main(mode, host='localhost', port=7000, *args):
         backend = api.LockingApi(api.DictionaryApi(storage, authenticator))
         httpservice.listen((host, int(port)), backend)
     elif mode == "irc":
-        sl = dchat.learn.SimpleLearner(storage)
-        sc = dchat.compose.SeededTreeComposer(storage)
-        bot = ircservice.ChatBot(*itertools.chain([sl, sc], args, [host, port]))
+        backend = api.TextCommandApi(storage)
+        bot = ircservice.ChatBot(*itertools.chain([backend], args, [host, port]))
         bot.start()
     
     storage.close()
