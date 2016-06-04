@@ -1,6 +1,8 @@
 import collections, itertools, random, math
 from dchat.storage import EmptyResponseError
 
+__all__ = ['SimpleComposer', 'TwoWayComposer', 'TwoWayExtendingComposer', 'SeededTreeComposer']
+
 class SimpleComposer (object):
 
     def __init__(self, backend):
