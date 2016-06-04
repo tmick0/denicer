@@ -1,17 +1,18 @@
 from multiprocessing import JoinableQueue as Queue, Manager
 from threading import Thread
 from dchat import compose, learn
+import inspect
 
 def customizedFetch(backend, composer, **kwargs):
 
-    if composer == "SimpleComposer":
-        c = compose.SimpleComposer(backend, **kwargs)
-    elif composer == "TwoWayComposer":
-        c = compose.TwoWayComposer(backend, **kwargs)
-    elif composer == "TwoWayExtendingComposer":
-        c = compose.TwoWayExtendingComposer(backend, **kwargs)
-    elif composer == "SeededTreeComposer":
-        c = compose.SeededTreeComposer(backend, **kwargs)
+    if composer in compose.__all__:
+        c = compose.__getattribute__(composer)
+        argspec = inspect.getargspec(c.__init__)
+        if not argspec.keywords:
+            kwargs = {
+                k: kwargs[k] for k in set(argspec.args).intersection(kwargs)
+            }
+        c = c(backend, **kwargs)
     else:
         return {
             "error": "Unknown composer %s" % composer
