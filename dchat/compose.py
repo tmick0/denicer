@@ -92,12 +92,13 @@ class TwoWayExtendingComposer (object):
 
 class SeededTreeComposer (object):
 
-    def __init__(self, backend, seed = None, targetLength = 4, breadth = 8, depth = 2):
+    def __init__(self, backend, seed = None, targetLength = 4, breadth = 8, depth = 2, maxIters = 20):
         self._st = backend
         self.seed = seed
         self.target  = int(targetLength)
         self.depth   = int(depth)
         self.breadth = int(breadth)
+        self.iters = int(maxIters)
     
     def generate(self):
     
@@ -146,19 +147,23 @@ class SeededTreeComposer (object):
             phrase = collections.deque(seed)
             start, stop = False, False
             
-            while not start:
+            attempts = 0
+            while not start and attempts < self.iters:
                 try:
                     seq, start, _ = self._st.getRowEndingWith(phrase[0], phrase[1])
                     phrase.appendleft(seq[0])
                 except EmptyResponseError:
                     start = True
+                attempts += 1
             
-            while not stop:
+            attempts = 0
+            while not stop and attempts < self.iters:
                 try:
                     seq, _, stop = self._st.getRowStartingWith(phrase[-2], phrase[-1])
                     phrase.append(seq[-1])
                 except EmptyResponseError:
                     stop = True
+                attempts += 1
             
             candidates.add(tuple(phrase))
         
