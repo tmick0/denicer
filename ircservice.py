@@ -3,8 +3,10 @@ import irc.bot
 import irc.strings
 from cannedresponse import CannedResponse, EmptyResponseError
 from random import random
+from collections import deque
 
-TALK_RATE=0.05
+TALK_RATE = 0.05
+HISTORY_LEN = 2
 
 class ChatBot(irc.bot.SingleServerIRCBot):
     
@@ -17,6 +19,7 @@ class ChatBot(irc.bot.SingleServerIRCBot):
         self.channel = chan
         self.api = api
         self.canned = CannedResponse("canned.db")
+        self.history = deque()
     
     def on_nicknameinuse(self, c, e):
         c.nick(c.get_nickname() + "_")
@@ -44,8 +47,15 @@ class ChatBot(irc.bot.SingleServerIRCBot):
             self.api.handle("learn", args=e.arguments[0])
             try:
                 resp = self.canned.get(e.arguments[0])
-                c.privmsg(self.channel, resp)
+                if self.history.count(resp) < HISTORY_LEN:
+                    c.privmsg(self.channel, resp)
+                    while len(self.history) >= HISTORY_LEN:
+                        self.history.popleft()
+                    self.history.append(resp)
             except EmptyResponseError:
                 if random() < TALK_RATE:
                     r = self.api.handle("fetch", args=a[1][4:].strip())
+                    while len(self.history) >= HISTORY_LEN:
+                        self.history.popleft()
+                    self.history.append(r)
                     c.privmsg(self.channel, r)
