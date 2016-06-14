@@ -54,7 +54,7 @@ class ChatBot(irc.bot.SingleServerIRCBot):
                     self.history.append(resp)
             except EmptyResponseError:
                 if random() < TALK_RATE:
-                    r = self.api.handle("fetch", args=a[1][4:].strip())
+                    r = self.api.handle("fetch")
                     while len(self.history) >= HISTORY_LEN:
                         self.history.popleft()
                     self.history.append(r)
