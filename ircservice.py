@@ -2,6 +2,9 @@ import ssl
 import irc.bot
 import irc.strings
 from cannedresponse import CannedResponse, EmptyResponseError
+from random import random
+
+TALK_RATE=0.05
 
 class ChatBot(irc.bot.SingleServerIRCBot):
     
@@ -21,9 +24,6 @@ class ChatBot(irc.bot.SingleServerIRCBot):
     def on_welcome(self, c, e):
         c.join(self.channel)
 
-    def on_privmsg(self, c, e):
-        self.do_command(e, e.arguments[0])
-
     def on_pubmsg(self, c, e):
         a = e.arguments[0].split(":", 1)
         if len(a) > 1 and irc.strings.lower(a[0]) == irc.strings.lower(self.connection.get_nickname()):
@@ -38,10 +38,14 @@ class ChatBot(irc.bot.SingleServerIRCBot):
                 else:
                     self.canned.add(parts[0].strip(), parts[1].strip())
                     c.privmsg(self.channel, "mapped \"%s\" to \"%s\"" % (parts[0].strip(), parts[1].strip()))
+            elif a[1][0:6] == "rejoin":
+                c.join(self.channel)
         else:
             self.api.handle("learn", args=e.arguments[0])
             try:
                 resp = self.canned.get(e.arguments[0])
                 c.privmsg(self.channel, resp)
             except EmptyResponseError:
-                pass
+                if random() < TALK_RATE:
+                    r = self.api.handle("fetch", args=a[1][4:].strip())
+                    c.privmsg(self.channel, r)
