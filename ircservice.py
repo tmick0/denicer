@@ -27,6 +27,10 @@ class ChatBot(irc.bot.SingleServerIRCBot):
     def on_welcome(self, c, e):
         c.join(self.channel)
 
+    def on_privmsg(self, c, e):
+        if e.arguments[0] == "rejoin":
+            c.join(self.channel)
+
     def on_pubmsg(self, c, e):
         a = e.arguments[0].split(":", 1)
         if len(a) > 1 and irc.strings.lower(a[0]) == irc.strings.lower(self.connection.get_nickname()):
@@ -41,8 +45,6 @@ class ChatBot(irc.bot.SingleServerIRCBot):
                 else:
                     self.canned.add(parts[0].strip(), parts[1].strip())
                     c.privmsg(self.channel, "mapped \"%s\" to \"%s\"" % (parts[0].strip(), parts[1].strip()))
-            elif a[1][0:6] == "rejoin":
-                c.join(self.channel)
         else:
             self.api.handle("learn", args=e.arguments[0])
             try:
