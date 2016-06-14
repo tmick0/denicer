@@ -1,6 +1,7 @@
 import ssl
 import irc.bot
 import irc.strings
+from cannedresponse import CannedResponse, EmptyResponseError
 
 class ChatBot(irc.bot.SingleServerIRCBot):
     
@@ -12,6 +13,7 @@ class ChatBot(irc.bot.SingleServerIRCBot):
             irc.bot.SingleServerIRCBot.__init__(self, [(server, int(port))], nick, nick)
         self.channel = chan
         self.api = api
+        self.canned = CannedResponse("canned.db")
     
     def on_nicknameinuse(self, c, e):
         c.nick(c.get_nickname() + "_")
@@ -29,5 +31,17 @@ class ChatBot(irc.bot.SingleServerIRCBot):
             if a[1][0:4] == "talk":
                 r = self.api.handle("fetch", args=a[1][4:].strip())
                 c.privmsg(self.channel, r)
+            elif a[1][0:6] == "canned":
+                parts = a[1][6:].split("->")
+                if len(parts) < 2:
+                    c.privmsg(self.channel, "usage: canned trigger prefix -> response phrase")
+                else:
+                    self.canned.add(parts[0].strip(), parts[1].strip())
+                    c.privmsg(self.channel, "mapped \"%s\" to \"%s\"" % (parts[0].strip(), parts[1].strip()))
         else:
             self.api.handle("learn", args=e.arguments[0])
+            try:
+                resp = self.canned.get(e.arguments[0])
+                c.privmsg(self.channel, resp)
+            except EmptyResponseError:
+                pass
