@@ -43,6 +43,13 @@ class ChatBot(irc.bot.SingleServerIRCBot):
                     c.privmsg(self.channel, "mapped \"%s\" to \"%s\"" % (parts[0].strip(), parts[1].strip()))
             elif a[1][0:6] == "rejoin":
                 c.join(self.channel)
+            elif a[1][0:4] == "rate":
+                rest = a[1][4:].strip()
+                try:
+                    TALK_RATE = float(rest)
+                    c.privmsg(self.channel, "talk rate set to %0.2f" % (TALK_RATE))
+                except ValueError:
+                    c.privmsg(self.channel, "talk rate is currently %0.2f" % (TALK_RATE))
         else:
             self.api.handle("learn", args=e.arguments[0])
             try:
