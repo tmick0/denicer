@@ -5,7 +5,6 @@ from cannedresponse import CannedResponse, EmptyResponseError
 from random import random
 from collections import deque
 
-TALK_RATE = 0.05
 HISTORY_LEN = 2
 
 class ChatBot(irc.bot.SingleServerIRCBot):
@@ -20,6 +19,7 @@ class ChatBot(irc.bot.SingleServerIRCBot):
         self.api = api
         self.canned = CannedResponse("canned.db")
         self.history = deque()
+        self.talk_rate = 0.025
     
     def on_nicknameinuse(self, c, e):
         c.nick(c.get_nickname() + "_")
@@ -50,10 +50,10 @@ class ChatBot(irc.bot.SingleServerIRCBot):
             elif a[1][0:4] == "rate":
                 rest = a[1][4:].strip()
                 try:
-                    TALK_RATE = float(rest)
-                    c.privmsg(self.channel, "talk rate set to %0.2f" % (TALK_RATE))
+                    self.talk_rate = float(rest)
+                    c.privmsg(self.channel, "talk rate set to %0.2f" % (self.talk_rate))
                 except ValueError:
-                    c.privmsg(self.channel, "talk rate is currently %0.2f" % (TALK_RATE))
+                    c.privmsg(self.channel, "talk rate is currently %0.2f" % (self.talk_rate))
         else:
             self.api.handle("learn", args=e.arguments[0])
             try:
@@ -64,7 +64,7 @@ class ChatBot(irc.bot.SingleServerIRCBot):
                         self.history.popleft()
                     self.history.append(resp)
             except EmptyResponseError:
-                if random() < TALK_RATE:
+                if random() < self.talk_rate:
                     r = self.api.handle("fetch")
                     while len(self.history) >= HISTORY_LEN:
                         self.history.popleft()
